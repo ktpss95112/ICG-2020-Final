@@ -1,0 +1,11 @@
+# editor
+.vscode
+*~
+*.swp
+*.swo
+
+# Dependency directories
+node_modules/
+
+# Optional eslint cache
+.eslintcache
