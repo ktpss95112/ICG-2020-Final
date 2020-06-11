@@ -3,21 +3,33 @@
 const { mat4, vec3 } = glMatrix;
 
 
+const getNormalMatrix = function (out, a) {
+    mat4.invert(out, a);
+    mat4.transpose(out, out);
+    return out;
+}
+
+
 window.onload = function main() {
-    const m4 = twgl.m4;
     const gl = document.querySelector("#render").getContext("webgl");
     const programInfo = twgl.createProgramInfo(gl, [vertShaderSrc, fragShaderSrc]);
 
     const arrays = icomesh(1);
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays); // vec3? vec4?
 
-    const uniforms = {
-        u_MVMatrix: mat4.create()
-    };
-
-    const eye = [0, 0.5, -3];
+    const eye = [0, 0.5, 3];
     const target = [0, 0, 0];
     const up = [0, 1, 0];
+    const light = [1, 3, 2];
+
+    const uniforms = {
+        u_kads: [0.4, 0.6, 0.2],
+        u_eyePosition: eye,
+        u_lightPosition: light,
+        u_MMatrix: mat4.create(),
+        u_normalMatrix: mat4.create(),
+        u_PVMMatrix: mat4.create(),
+    };
 
     function render(timestamp) {
         timestamp *= 0.001;
@@ -45,12 +57,14 @@ window.onload = function main() {
         mat4.perspective(projectionMatrix, fov, aspect, zNear, zFar);
 
         // multiply transformation matrices
-        let MVPMatrix = mat4.create();
-        mat4.mul(MVPMatrix, MVPMatrix, projectionMatrix);
-        mat4.mul(MVPMatrix, MVPMatrix, viewMatrix)
-        mat4.mul(MVPMatrix, MVPMatrix, modelMatrix);
+        let PVMMatrix = mat4.create();
+        mat4.mul(PVMMatrix, PVMMatrix, projectionMatrix);
+        mat4.mul(PVMMatrix, PVMMatrix, viewMatrix)
+        mat4.mul(PVMMatrix, PVMMatrix, modelMatrix);
 
-        uniforms.u_MVPMatrix = MVPMatrix;
+        uniforms.u_MMatrix = modelMatrix;
+        uniforms.u_normalMatrix = getNormalMatrix(mat4.create(), modelMatrix);
+        uniforms.u_PVMMatrix = PVMMatrix;
 
         gl.useProgram(programInfo.program);
         twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
