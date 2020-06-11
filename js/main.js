@@ -15,7 +15,7 @@ window.onload = function main() {
         u_MVMatrix: mat4.create()
     };
 
-    const eye = [0, 0.5, -1.5];
+    const eye = [0, 0.5, -3];
     const target = [0, 0, 0];
     const up = [0, 1, 0];
 
@@ -30,7 +30,6 @@ window.onload = function main() {
 
         // model matrix
         let modelMatrix = mat4.create();
-        mat4.translate(modelMatrix, modelMatrix, [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]);
         mat4.rotateY(modelMatrix, modelMatrix, timestamp);
 
         // view matrix
