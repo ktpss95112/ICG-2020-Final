@@ -4,16 +4,13 @@
         <title>ICG 2020 Final</title>
 
         <link rel="stylesheet" href="main.css">
-        <script src="./js/twgl-full.min.js"></script>
-        <script src="./js/gl-matrix-3.3.0-min.js"></script>
-        <script src="./js/shader.js"></script>
-        <script src="./js/icomesh.js"></script>
-        <script src="./js/main.js"></script>
+        <script src="./js/lib/perlin.js"></script>
+        <script src="./js/main.js" type="module"></script>
     </head>
     <body>
         <div class="main-row row">
             <div id="screen" onload=main()>
-                <canvas id="render"></canvas>
+                <canvas id="render" width="1280" height="720"></canvas>
             </div>
             <div id="control">
                 Some input box/bar for tweaking.
