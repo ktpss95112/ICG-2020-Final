@@ -20,10 +20,11 @@ const setTranslation = function (out, mat, trans) {
 
 window.onload = function main() {
     const gl = document.querySelector("#render").getContext("webgl");
-    const ballProgramInfo = twgl.createProgramInfo(gl, [ballShaderSrc.vert, ballShaderSrc.frag]);
+    const ballPhongProgramInfo = twgl.createProgramInfo(gl, [ballPhongShaderSrc.vert, ballPhongShaderSrc.frag]);
+    const ballRayTracingProgramInfo = twgl.createProgramInfo(gl, [ballRayTracingShaderSrc.vert, ballRayTracingShaderSrc.frag]);
     const skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxShaderSrc.vert, skyboxShaderSrc.frag]);
 
-    const arrays = icomesh(1);
+    const arrays = icomesh(5);
     const ballBufferInfo = twgl.createBufferInfoFromArrays(gl, arrays); // vec3? vec4?
     const skyboxBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
 
@@ -44,11 +45,13 @@ window.onload = function main() {
     const target = [0, 0, 0];
     const up = [0, 1, 0];
     const light = [1, 3, 2];
+    const lightDirection = [1, 3, 2];
 
     const uniforms = {
-        u_kads: [0.4, 0.6, 0.2],
+        u_kads: [0.4, 0.6, 0.2], // k: constant, a: ambient, d: diffuse, s: specular
         u_eyePosition: [Math.sin(0) * eyeRadius, 0.5, Math.cos(0) * eyeRadius],
-        u_lightPosition: light,
+        u_lightPosition: light, // for single point light source
+        u_lightDirection: lightDirection, // for parellel light source
         u_normalMatrix: mat4.create(),
         u_MMatrix: mat4.create(),
         u_VMatrix: mat4.create(),
@@ -61,7 +64,7 @@ window.onload = function main() {
     function render(timestamp) {
         timestamp *= 0.001;
         const eye = [Math.sin(timestamp / 3.14) * eyeRadius, 0.5, Math.cos(timestamp / 3.14) * eyeRadius];
-        uniforms.eye = eye;
+        uniforms.u_eyePosition = eye;
 
         twgl.resizeCanvasToDisplaySize(gl.canvas);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -102,9 +105,9 @@ window.onload = function main() {
         mat4.invert(PVMatrixInverse, PVMatrixInverse);
 
         // draw ball
-        gl.useProgram(ballProgramInfo.program);
-        twgl.setBuffersAndAttributes(gl, ballProgramInfo, ballBufferInfo);
-        twgl.setUniforms(ballProgramInfo, uniforms);
+        gl.useProgram(ballRayTracingProgramInfo.program);
+        twgl.setBuffersAndAttributes(gl, ballRayTracingProgramInfo, ballBufferInfo);
+        twgl.setUniforms(ballRayTracingProgramInfo, uniforms);
         twgl.drawBufferInfo(gl, ballBufferInfo);
 
         // draw skybox

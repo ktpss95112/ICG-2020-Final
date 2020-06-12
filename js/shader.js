@@ -1,7 +1,8 @@
 'use strict';
 
 const skyboxShaderSrc = {};
-const ballShaderSrc = {};
+const ballPhongShaderSrc = {};
+const ballRayTracingShaderSrc = {};
 
 
 skyboxShaderSrc.vert = `
@@ -32,7 +33,7 @@ void main() {
 `;
 
 
-ballShaderSrc.vert = `
+ballPhongShaderSrc.vert = `
 attribute vec3 position;
 attribute vec3 normal;
 
@@ -51,7 +52,7 @@ void main() {
 `;
 
 
-ballShaderSrc.frag = `
+ballPhongShaderSrc.frag = `
 precision mediump float;
 
 uniform vec3 u_kads;
@@ -75,5 +76,44 @@ void main() {
     vec3 specular = u_kads.z * lightColor * pow(max(dot(eyeDir, reflectDir), 0.0), shininess);
 
     gl_FragColor = vec4((ambient + diffuse + specular) * objectColor, 1.0);
+}
+`;
+
+
+ballRayTracingShaderSrc.vert = `
+attribute vec3 position;
+attribute vec3 normal;
+
+uniform mat4 u_MMatrix;
+uniform mat4 u_normalMatrix;
+uniform mat4 u_PVMMatrix;
+
+varying vec3 v_position;
+varying vec3 v_normal;
+
+void main() {
+    v_position = (u_MMatrix * vec4(position, 1.0)).xyz;
+    v_normal = normalize(mat3(u_normalMatrix) * normal.xyz);
+    gl_Position = u_PVMMatrix * vec4(position, 1.0);
+}
+`;
+
+
+ballRayTracingShaderSrc.frag = `
+precision mediump float;
+
+uniform vec3 u_eyePosition;
+uniform vec3 u_lightDirection;
+uniform samplerCube u_skybox;
+
+varying vec3 v_position;
+varying vec3 v_normal;
+
+
+void main() {
+    vec3 eye2target = normalize(v_position - u_eyePosition);
+
+    vec3 reflectDir = reflect(eye2target, v_normal);
+    gl_FragColor = textureCube(u_skybox, reflectDir);
 }
 `;
