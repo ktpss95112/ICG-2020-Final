@@ -1,6 +1,38 @@
 'use strict';
 
-const vertShaderSrc = `
+const skyboxShaderSrc = {};
+const ballShaderSrc = {};
+
+
+skyboxShaderSrc.vert = `
+attribute vec4 position;
+
+varying vec4 v_position;
+
+void main() {
+    v_position = position;
+
+    gl_Position = position;
+    gl_Position.z = 0.999;
+}
+`;
+
+
+skyboxShaderSrc.frag = `
+precision mediump float;
+
+uniform samplerCube u_skybox;
+uniform mat4 u_PVMatrixInverse;
+
+varying vec4 v_position;
+
+void main() {
+    gl_FragColor = textureCube(u_skybox, (u_PVMatrixInverse * v_position).xyz);
+}
+`;
+
+
+ballShaderSrc.vert = `
 attribute vec3 position;
 attribute vec3 normal;
 
@@ -19,7 +51,7 @@ void main() {
 `;
 
 
-const fragShaderSrc = `
+ballShaderSrc.frag = `
 precision mediump float;
 
 uniform vec3 u_kads;
@@ -35,7 +67,7 @@ void main() {
     vec3 normal      = normalize(v_normal);
     vec3 lightDir    = normalize(u_lightPosition - v_position);
     vec3 eyeDir      = normalize(u_eyePosition - v_position);
-    vec3 reflectDir  = reflect(-lightDir, normal);
+    vec3 reflectDir  = dot(normal, lightDir) > 0.0 ? reflect(-lightDir, normal) : vec3(0.0);
     float shininess  = 2.0;
 
     vec3 ambient  = u_kads.x * lightColor;
