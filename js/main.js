@@ -9,7 +9,10 @@ import { Water } from './lib/Water.js';
 import { Sky } from './lib/Sky.js';
 
 const waterTexturePath = '/assets/textures/water.jpg';
-const umiRadius = 6;
+const umiRadius = 10;
+const cylinderNum = 10;
+const cylinderRadius = 1;
+const cylinderMaxHeight = 100;
 
 window.onload = function main() {
     let scene, camera, renderer;
@@ -34,31 +37,43 @@ window.onload = function main() {
         renderer.setSize(cvs.width, cvs.height);
         renderer.physicallyCorrectLights = true;
 
-        cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, {
-            format: THREE.RGBAFormat,
-            generateMipmaps: true,
-            minFilter: THREE.LinearMipmapLinearFilter
-        });
-        cubeCamera = new THREE.CubeCamera(100, 7000, cubeRenderTarget);
-        scene.add(cubeCamera);
-
         initOcean(); 
         initSky();
+        initCylinders();
+        //scene.background = loadSkyBox('FishPond');
+        initUmi();
 
         setControls();
         setLight();
+    }
 
+    function initUmi() {
         let geometry = new THREE.SphereGeometry(umiRadius, 36, 24);
+        cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, {
+            format: THREE.RGBAFormat,
+            generateMipmaps: true,
+            minFilter: THREE.LinearMipmapLinearFilter,
+        });
+        
+        cubeCamera = new THREE.CubeCamera(1, 10000, cubeRenderTarget);
+        scene.add(cubeCamera);
+        cubeCamera.update(renderer, scene);
         
         let shader = FresnelShader;
-        let uniforms = THREE.UniformsUtils.clone(shader.uniforms);
-        cubeCamera.update(renderer, scene);
+        let uniforms = THREE.UniformsUtils.clone(shader.uniforms); 
         uniforms['tCube'].value = cubeRenderTarget.texture;
+        var fresnelUniforms = {
+            "mRefractionRatio": { type: "f", value: 1.05 },
+            "mFresnelBias": 	{ type: "f", value: 0.1 },
+            "mFresnelPower": 	{ type: "f", value: 2.0 },
+            "mFresnelScale": 	{ type: "f", value: 1.0 },
+            "tCube": 			{ type: "t", value: cubeRenderTarget.texture }
+        };
         let material = new THREE.ShaderMaterial({
-            uniforms: uniforms,
+            uniforms: fresnelUniforms,
             vertexShader: shader.vertexShader,
             fragmentShader: shader.fragmentShader,
-            blending:THREE.MultiplyBlending,
+            blending: THREE.MultiplyBlending,
         });
         umi = new THREE.Mesh(geometry, material);
         umi.position.y = 5;
@@ -119,6 +134,17 @@ window.onload = function main() {
         sun_uniforms['sunPosition'].value.copy(sunSphere.position);
     }
 
+    function initCylinders() {
+        let material = new THREE.MeshPhongMaterial({color: 0xff0000});
+        for (let i = 0; i < cylinderNum; i++) {
+            let geometry = new THREE.CylinderGeometry(cylinderRadius, cylinderRadius, Math.random() * cylinderMaxHeight, 32);
+            let cylinder = new THREE.Mesh(geometry, material);
+            cylinder.position.x = -50 + Math.random() * 100;
+            cylinder.position.z = -50 + Math.random() * 100;
+            scene.add(cylinder);
+        }
+    }
+
     function render() {
         if (controls) {
             controls.update();
@@ -145,7 +171,6 @@ window.onload = function main() {
         umi.visible = false;
         cubeCamera.position.copy(umi.position);
         cubeCamera.update(renderer, scene);
-        umi.material.uniforms['tCube'].value = cubeRenderTarget.texture;
         umi.visible = true;
     }
 
@@ -163,8 +188,8 @@ window.onload = function main() {
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.5;
-        controls.minDistance = 5.0;
-        controls.maxDistance = 25.0;
+        controls.minDistance = 2.0;
+        controls.maxDistance = 100.0;
     }
 
     function loadSkyBox(name) {
