@@ -55,7 +55,7 @@ window.onload = function main() {
             minFilter: THREE.LinearMipmapLinearFilter,
         });
         
-        cubeCamera = new THREE.CubeCamera(1, 10000, cubeRenderTarget);
+        cubeCamera = new THREE.CubeCamera(5, 10000, cubeRenderTarget);
         scene.add(cubeCamera);
         cubeCamera.update(renderer, scene);
         
@@ -73,7 +73,7 @@ window.onload = function main() {
             uniforms: fresnelUniforms,
             vertexShader: shader.vertexShader,
             fragmentShader: shader.fragmentShader,
-            blending: THREE.MultiplyBlending,
+            //blending: THREE.MultiplyBlending,
         });
         umi = new THREE.Mesh(geometry, material);
         umi.position.y = 5;
