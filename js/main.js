@@ -41,7 +41,8 @@ window.onload = function main() {
         minMag: gl.LINEAR
     });
 
-    const eyeRadius = 3;
+    const eyeRadius = 2.0;
+    const eyeHeight = 0;
     const target = [0, 0, 0];
     const up = [0, 1, 0];
     const light = [1, 3, 2];
@@ -49,7 +50,7 @@ window.onload = function main() {
 
     const uniforms = {
         u_kads: [0.4, 0.6, 0.2], // k: constant, a: ambient, d: diffuse, s: specular
-        u_eyePosition: [Math.sin(0) * eyeRadius, 0.5, Math.cos(0) * eyeRadius],
+        u_eyePosition: [Math.sin(0) * eyeRadius, eyeHeight, Math.cos(0) * eyeRadius],
         u_lightPosition: light, // for single point light source
         u_lightDirection: lightDirection, // for parellel light source
         u_normalMatrix: mat4.create(),
@@ -59,11 +60,14 @@ window.onload = function main() {
         u_PVMMatrix: mat4.create(),
         u_PVMatrixInverse: mat4.create(),
         u_skybox: skyboxTex,
+        u_maxReflection: 1,
+        u_waterRadius: 1,
     };
 
     function render(timestamp) {
         timestamp *= 0.001;
-        const eye = [Math.sin(timestamp / 3.14) * eyeRadius, 0.5, Math.cos(timestamp / 3.14) * eyeRadius];
+        const eye = [Math.sin(timestamp / 3.14) * eyeRadius, eyeHeight, Math.cos(timestamp / 3.14) * eyeRadius];
+        // const eye = [Math.sin(0) * eyeRadius, eyeHeight, Math.cos(0) * eyeRadius];
         uniforms.u_eyePosition = eye;
 
         twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -75,7 +79,8 @@ window.onload = function main() {
 
         // model matrix
         let MMatrix = uniforms.u_MMatrix;
-        mat4.identity(MMatrix);
+        let scaling = uniforms.u_waterRadius;
+        mat4.fromScaling(MMatrix, [scaling, scaling, scaling]);
         // mat4.fromRotation(MMatrix, timestamp, [0, 1, 0]); // rotate radian(timestamp) by y-axis([0, 1, 0])
 
         // view matrix
@@ -84,7 +89,7 @@ window.onload = function main() {
 
         // projection matrix
         let PMatrix = uniforms.u_PMatrix;
-        const fov = 45 * Math.PI / 180;
+        const fov = 60 * Math.PI / 180;
         const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
         const zNear = 0.5;
         const zFar = 10;
