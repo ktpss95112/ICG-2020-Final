@@ -100,7 +100,7 @@ void main() {
 
 
 ballRayTracingShaderSrc.frag = `
-precision mediump float;
+precision highp float;
 
 uniform int u_maxReflection;
 uniform float u_waterRadius; // TODO: store the radius in a texture
@@ -112,6 +112,8 @@ uniform samplerCube u_skybox;
 varying vec3 v_position;
 varying vec3 v_normal;
 
+const float PI = 3.1415926535897932384626433832795;
+const float PI_2 = 1.57079632679489661923;
 const float IOR_AIR = 1.0;
 const float IOR_WATER = 1.333333;
 const float R0 = 0.02; // the R0 in Schlick's approximation
@@ -119,8 +121,7 @@ const float R0 = 0.02; // the R0 in Schlick's approximation
 vec3 getIntersectPos(vec3 currentPos, vec3 currentDir) {
     if (length(currentPos) <= u_waterRadius + 0.01) { // TODO: store the radius in a texture
         // inside the ball
-        // gl_FragColor.rgb = currentDir;
-        return normalize(currentPos + 2.0 * u_waterRadius * dot(normalize(currentDir), normalize(-currentPos)));
+        return normalize(currentPos + 2.0 * u_waterRadius * dot(normalize(currentDir), normalize(-currentPos)) * normalize(currentDir));
     }
     else {
         // outside the ball
@@ -150,12 +151,13 @@ vec4 getPhongColor() {
 }
 
 void main() {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
 
     // trace the ray
     float attenuation = 1.0;
     vec3 currentPos = u_eyePosition;
     vec3 currentDir = normalize(v_position - u_eyePosition);
+
     for (int depth = 1; depth <= 10; ++depth) {
         // Loop index cannot be compared with non-constant expression
         if (depth > u_maxReflection) { break; }
@@ -163,72 +165,36 @@ void main() {
         vec3 newPos = getIntersectPos(currentPos, currentDir);
         vec3 incident = newPos - currentPos;
         vec3 newPosNormal = normalize(newPos); // TODO: use texture to store the normal of every position
+        newPosNormal = faceforward(newPosNormal, incident, newPosNormal);
         vec3 newReflectDir = normalize(reflect(incident, newPosNormal));
 
         bool reflectIsOutward = (dot(newReflectDir, newPos) > 0.0);
-        bool isTotalInternalReflection = false;
-        vec3 newRefractDir;
-        if (reflectIsOutward) {
-            newRefractDir = normalize(refract(incident, newPosNormal, IOR_AIR / IOR_WATER));
-        }
-        else if (dot(newPos, incident) > sqrt(1.0 - (IOR_AIR / IOR_WATER) * (IOR_AIR / IOR_WATER))) {
-            isTotalInternalReflection = true;
-        }
-        else {
-            newRefractDir = normalize(refract(incident, newPosNormal, IOR_WATER / IOR_AIR));
-        }
-        // gl_FragColor = textureCube(u_skybox, newRefractDir);
+        float ior = (reflectIsOutward) ? (IOR_WATER / IOR_AIR) : (IOR_AIR / IOR_WATER);
+        vec3 newRefractDir = refract(incident, newPosNormal, ior); // it may be vec3(0.0) if total internal reflection
+        if (length(newRefractDir) > 0.0001) { newRefractDir = normalize(newRefractDir); }
 
-        if (depth == 1) {
-            // newRefractDir = normalize(refract(incident, newPosNormal, ));
-            // gl_FragColor = textureCube(u_skybox, newRefractDir);
-            // gl_FragColor.rgb = newRefractDir;
-            // gl_FragColor.rgb = vec3(length(newRefractDir));
-            if (newRefractDir.y > 0.0) {
-                // gl_FragColor.gb = vec2(1.0, 1.0);
-            }
-            else {
-                // gl_FragColor.gb = vec2(0.0);
-            }
-            // gl_FragColor.rgb = vec3(newRefractDir.z, newRefractDir.z, newRefractDir.z);
-            // gl_FragColor.rgb = newPos;
-        }
+        // calculate reflective coefficient
+        float reflCoef = (length(newRefractDir) > 0.0001) ? \
+                         (R0 + (1.0 - R0) * pow(1.0 - dot(normalize(newPosNormal), normalize(-incident)), 5.0)) : \
+                         1.0; // total internal reflection
 
-        float reflCoef = R0 + (1.0 - R0) * pow(1.0 - dot(normalize(v_normal), normalize(-incident)), 5.0);
-        // reflCoef *= 1.5;
         if (reflectIsOutward) {
-            // gl_FragColor += attenuation * reflCoef * textureCube(u_skybox, newReflectDir);
-            gl_FragColor += textureCube(u_skybox, newRefractDir); // DEMO USE
+            color += attenuation * reflCoef * textureCube(u_skybox, newReflectDir);
             attenuation *= (1.0 - reflCoef);
             currentPos = newPos;
             currentDir = newRefractDir;
         }
         else {
-            // gl_FragColor = vec4(1.0 - reflCoef, 1.0 - reflCoef, 1.0 - reflCoef, 1.0);
-            // gl_FragColor.rgb = newPos;
-            // gl_FragColor = textureCube(u_skybox, newPos);
-            // gl_FragColor.rgb = newPos;
-            if (!isTotalInternalReflection) {
-                // gl_FragColor += attenuation * (1.0 - reflCoef) * textureCube(u_skybox, newRefractDir);
-                attenuation *= reflCoef;
-            }
+            color += attenuation * (1.0 - reflCoef) * textureCube(u_skybox, newRefractDir);
+            attenuation *= reflCoef;
             currentPos = newPos;
             currentDir = newReflectDir;
         }
 
     }
 
+    color.rgb *= vec3(1.0 + attenuation);
 
-    // // reflected color
-    // vec3 eye2target = normalize(v_position - u_eyePosition);
-    // vec3 reflectDir = normalize(reflect(eye2target, v_normal));
-    // vec4 reflColor = textureCube(u_skybox, reflectDir);
-
-    // // water color
-    // vec4 waterColor = getPhongColor();
-
-    // // combine
-    // float reflCoef = R0 + (1.0 - R0) * pow(1.0 - dot(v_normal, -eye2target), 5.0);
-    // gl_FragColor = reflCoef * 1.5 * reflColor + (1.0 - reflCoef * 1.5) * waterColor;
+    gl_FragColor = color;
 }
 `;

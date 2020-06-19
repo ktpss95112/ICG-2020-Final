@@ -20,7 +20,7 @@ const setTranslation = function (out, mat, trans) {
 
 window.onload = function main() {
     const gl = document.querySelector("#render").getContext("webgl");
-    const ballPhongProgramInfo = twgl.createProgramInfo(gl, [ballPhongShaderSrc.vert, ballPhongShaderSrc.frag]);
+    // const ballPhongProgramInfo = twgl.createProgramInfo(gl, [ballPhongShaderSrc.vert, ballPhongShaderSrc.frag]);
     const ballRayTracingProgramInfo = twgl.createProgramInfo(gl, [ballRayTracingShaderSrc.vert, ballRayTracingShaderSrc.frag]);
     const skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxShaderSrc.vert, skyboxShaderSrc.frag]);
 
@@ -37,11 +37,17 @@ window.onload = function main() {
             'images/negy.png',
             'images/posz.png',
             'images/negz.png',
+            // 'images/skybox/right.jpg',
+            // 'images/skybox/left.jpg',
+            // 'images/skybox/top.jpg',
+            // 'images/skybox/bottom.jpg',
+            // 'images/skybox/front.jpg',
+            // 'images/skybox/back.jpg',
         ],
         minMag: gl.LINEAR
     });
 
-    const eyeRadius = 2.0;
+    const eyeRadius = 3.0;
     const eyeHeight = 0;
     const target = [0, 0, 0];
     const up = [0, 1, 0];
@@ -60,13 +66,13 @@ window.onload = function main() {
         u_PVMMatrix: mat4.create(),
         u_PVMatrixInverse: mat4.create(),
         u_skybox: skyboxTex,
-        u_maxReflection: 1,
+        u_maxReflection: 2,
         u_waterRadius: 1,
     };
 
     function render(timestamp) {
         timestamp *= 0.001;
-        const eye = [Math.sin(timestamp / 3.14) * eyeRadius, eyeHeight, Math.cos(timestamp / 3.14) * eyeRadius];
+        const eye = [Math.sin(timestamp / 3.14 / 2) * eyeRadius, eyeHeight, Math.cos(timestamp / 3.14 /2 ) * eyeRadius];
         // const eye = [Math.sin(0) * eyeRadius, eyeHeight, Math.cos(0) * eyeRadius];
         uniforms.u_eyePosition = eye;
 
