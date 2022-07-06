@@ -116,7 +116,39 @@ const float PI = 3.1415926535897932384626433832795;
 const float PI_2 = 1.57079632679489661923;
 const float IOR_AIR = 1.0;
 const float IOR_WATER = 1.333333;
-const float R0 = 0.02; // the R0 in Schlick's approximation
+const vec3  IOR_WATER_RGB = vec3(1.3302, 1.3366, 1.3443);
+const float R0 = 0.0204081632653; // the R0 in Schlick's approximation
+const vec3  R0_RGB = vec3(0.02008018649505041, 0.020751977055675212, 0.021569877084979656);
+
+float getIOR(int rgb) {
+    if (rgb == 0) {
+        return IOR_WATER_RGB[0];
+    } else if (rgb == 1) {
+        return IOR_WATER_RGB[1];
+    } else {
+        return IOR_WATER_RGB[2];
+    }
+}
+
+float getR0(int rgb) {
+    if (rgb == 0) {
+        return R0_RGB[0];
+    } else if (rgb == 1) {
+        return R0_RGB[1];
+    } else {
+        return R0_RGB[2];
+    }
+}
+
+float getColor(vec4 color, int rgb) {
+    if (rgb == 0) {
+        return color[0];
+    } else if (rgb == 1) {
+        return color[1];
+    } else {
+        return color[2];
+    }
+}
 
 vec3 getIntersectPos(vec3 currentPos, vec3 currentDir) {
     if (length(currentPos) <= u_waterRadius + 0.01) { // TODO: store the radius in a texture
@@ -150,13 +182,9 @@ vec4 getPhongColor() {
     return vec4((ambient + diffuse + specular) * objectColor, 1.0);
 }
 
-void main() {
-    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
-
-    // trace the ray
+float traceRayOfComponent(int rgb, vec3 currentPos, vec3 currentDir) {
     float attenuation = 1.0;
-    vec3 currentPos = u_eyePosition;
-    vec3 currentDir = normalize(v_position - u_eyePosition);
+    float color = 0.0;
 
     for (int depth = 1; depth <= 10; ++depth) {
         // Loop index cannot be compared with non-constant expression
@@ -169,23 +197,23 @@ void main() {
         vec3 newReflectDir = normalize(reflect(incident, newPosNormal));
 
         bool reflectIsOutward = (dot(newReflectDir, newPos) > 0.0);
-        float ior = (reflectIsOutward) ? (IOR_WATER / IOR_AIR) : (IOR_AIR / IOR_WATER);
+        float ior = (reflectIsOutward) ? (getIOR(rgb) / IOR_AIR) : (IOR_AIR / getIOR(rgb));
         vec3 newRefractDir = refract(incident, newPosNormal, ior); // it may be vec3(0.0) if total internal reflection
         if (length(newRefractDir) > 0.0001) { newRefractDir = normalize(newRefractDir); }
 
         // calculate reflective coefficient
         float reflCoef = (length(newRefractDir) > 0.0001) ? \
-                         (R0 + (1.0 - R0) * pow(1.0 - dot(normalize(newPosNormal), normalize(-incident)), 5.0)) : \
+                         (getR0(rgb) + (1.0 - getR0(rgb)) * pow(1.0 - dot(normalize(newPosNormal), normalize(-incident)), 5.0)) : \
                          1.0; // total internal reflection
 
         if (reflectIsOutward) {
-            color += attenuation * reflCoef * textureCube(u_skybox, newReflectDir);
+            color += attenuation * reflCoef * getColor(textureCube(u_skybox, newReflectDir), rgb);
             attenuation *= (1.0 - reflCoef);
             currentPos = newPos;
             currentDir = newRefractDir;
         }
         else {
-            color += attenuation * (1.0 - reflCoef) * textureCube(u_skybox, newRefractDir);
+            color += attenuation * (1.0 - reflCoef) * getColor(textureCube(u_skybox, newRefractDir), rgb);
             attenuation *= reflCoef;
             currentPos = newPos;
             currentDir = newReflectDir;
@@ -193,7 +221,22 @@ void main() {
 
     }
 
-    color.rgb *= vec3(1.0 + attenuation);
+    color *= (1.0 + attenuation);
+
+    return color;
+}
+
+void main() {
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // trace the ray
+    float attenuation = 1.0;
+    vec3 currentPos = u_eyePosition;
+    vec3 currentDir = normalize(v_position - u_eyePosition);
+
+    color.r = traceRayOfComponent(0, currentPos, currentDir);
+    color.g = traceRayOfComponent(1, currentPos, currentDir);
+    color.b = traceRayOfComponent(2, currentPos, currentDir);
 
     gl_FragColor = color;
 }

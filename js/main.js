@@ -66,7 +66,7 @@ window.onload = function main() {
         u_PVMMatrix: mat4.create(),
         u_PVMatrixInverse: mat4.create(),
         u_skybox: skyboxTex,
-        u_maxReflection: 2,
+        u_maxReflection: 10,
         u_waterRadius: 1,
     };
 
